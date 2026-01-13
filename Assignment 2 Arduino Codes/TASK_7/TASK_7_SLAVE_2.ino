@@ -1,52 +1,56 @@
 #include <Wire.h>
 
-int a = 1;
-int c = 3;
-bool senda = true;
-int values[4] = {0,0,0,0};
-int op = 0;
+int valueForM1 = 3;
+int valueForM2 = 5;
+int receivedValues[4] = {0, 0, 0, 0};
+int broadcastCount = 0;
 
-void setup(){
-  Serial.begin(9600);
-  Wire.begin(6);
+void setup() {
+  Wire.begin(0x07);
   Wire.onRequest(requestEvent);
   Wire.onReceive(receiveEvent);
+  Serial.begin(9600);
 }
 
-void loop(){
-  delay(10);
+void loop() {
+  delay(100);
 }
 
-void requestEvent(){
-  if (senda){
-    Wire.write(a);
-    values[0] = a;
-    senda = false;
-  } 
-  else{
-    Wire.write(c);
-    values[2] = c;
-    senda = true;
+void requestEvent() {
+  static bool toggle = true;
+  if (toggle) {
+    Wire.write(valueForM1);
+    toggle = false;
+  } else {
+    Wire.write(valueForM2);
+    toggle = true;
   }
 }
 
-void receiveEvent(int bytes) {
-  while (Wire.available()) {
-    int data = Wire.read();
-    op++;
-    
-    if (op == 1) {
-      int sumab = data;
-      values[1] = sumab - values[0];
-    } 
-    else if (op == 2) {
-      int sumcd = data;
-      values[3] = sumcd - values[2];
-      Serial.println(values[0]);
-      Serial.println(values[1]);
-      Serial.println(values[2]);
-      Serial.println(values[3]);
-      op = 0;
+void receiveEvent(int numBytes) {
+  if (Wire.available()) {
+    int value = Wire.read();
+
+    if (broadcastCount == 0) {
+      int sum_ab = value;
+      receivedValues[1] = valueForM1;
+      receivedValues[0] = sum_ab - valueForM1;
+      broadcastCount++;
+    } else if (broadcastCount == 1) {
+      int sum_cd = value;
+      receivedValues[3] = valueForM2;
+      receivedValues[2] = sum_cd - valueForM2;
+
+      Serial.print("a = ");
+      Serial.println(receivedValues[0]);
+      Serial.print("b = ");
+      Serial.println(receivedValues[1]);
+      Serial.print("c = ");
+      Serial.println(receivedValues[2]);
+      Serial.print("d = ");
+      Serial.println(receivedValues[3]);
+
+      broadcastCount = 0;
     }
   }
 }
